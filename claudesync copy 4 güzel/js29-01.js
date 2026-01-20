@@ -1,4 +1,5 @@
-function applySyncState(state) {
+        
+        function applySyncState(state) {
             if (!state) return;
             
             // YouTube veya normal video kontrolü
@@ -18,14 +19,13 @@ function applySyncState(state) {
             
             debugLog('🔄 Applying sync state, playAtTime:', state.playAtTime, 'position:', state.syncedSeekPosition);
             
-            // ✅ FIX: Sadece pause yap, seekTo YAPMA (executeSyncPlay'de yapılacak)
-            // Çift seekTo sorunu bu şekilde çözülüyor
+            // Video'yu duraklat ve seek yap
             if (isYouTubeMode) {
                 ytPlayer.pauseVideo();
-                // seekTo kaldırıldı - executeSyncPlay'de tek seferde yapılacak
+                ytPlayer.seekTo(state.syncedSeekPosition, true);
             } else {
                 videoElement.pause();
-                // seekTo kaldırıldı - executeSyncPlay'de tek seferde yapılacak
+                videoElement.currentTime = state.syncedSeekPosition;
             }
             
             // Kontrolleri disable et
