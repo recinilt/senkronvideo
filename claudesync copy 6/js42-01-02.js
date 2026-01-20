@@ -1,3 +1,4 @@
+
 // Sahiplik isteği gönder
 async function sendOwnershipRequest() {
     if (!currentRoomId || !currentUser || isRoomOwner) {
@@ -47,18 +48,12 @@ async function sendOwnershipRequest() {
         
         debugLog('✅ Ownership request sent:', requestRef.key);
         
-        // ✅ FIX: Her iki buton için durumu güncelle
-        const buttonIds = ['btn-request-ownership', 'yt-btn-request-ownership'];
-        buttonIds.forEach(btnId => {
-            const btn = btnId === 'btn-request-ownership' 
-                ? getCachedElement(btnId) 
-                : document.getElementById(btnId);
-            if (btn) {
-                btn.disabled = true;
-                btn.style.opacity = '0.6';
-                btn.textContent = '⏳ İstek gönderildi...';
-            }
-        });
+        // Buton durumunu güncelle
+        const btn = getCachedElement('btn-request-ownership');
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = '⏳ İstek gönderildi...';
+        }
         
         // Timeout kontrolü - istek 60sn sonra otomatik silinir
         trackTimeout(setTimeout(async () => {
