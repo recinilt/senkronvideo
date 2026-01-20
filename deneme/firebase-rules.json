@@ -1,0 +1,263 @@
+{
+  "rules": {
+    "rooms": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      ".indexOn": ["createdAt", "owner"],
+      
+      "$roomId": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        
+        "name": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
+        },
+        
+        "owner": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        
+        "videoUrl": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 2000"
+        },
+        
+        "description": {
+          ".validate": "(newData.isString() && newData.val().length <= 500) || !newData.exists()"
+        },
+        
+        "passwordHash": {
+          ".validate": "(newData.isString() && newData.val().length === 64) || newData.val() === null || !newData.exists()"
+        },
+        
+        "p2p": {
+          ".read": "auth != null",
+          ".write": "auth != null && (data.parent().child('owner').val() === auth.uid || !data.exists())",
+          "magnetURI": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 10000"
+          },
+          "fileName": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
+          },
+          "fileSize": {
+            ".validate": "newData.isNumber() && newData.val() > 0"
+          },
+          "$other": {
+            ".validate": false
+          }
+        },
+        
+        "youtube": {
+          ".read": "auth != null",
+          ".write": "auth != null",
+          "videoId": {
+            ".validate": "newData.isString() && (newData.val() === '' || (newData.val().length >= 11 && newData.val().length <= 20))"
+          },
+          "originalUrl": {
+            ".validate": "newData.isString() && newData.val().length <= 500"
+          },
+          "$other": {
+            ".validate": false
+          }
+        },
+        
+        "screenSize": {
+          ".validate": "newData.isString() && (newData.val() === 'medium' || newData.val() === 'large' || newData.val() === 'imax')"
+        },
+        
+        "environment": {
+          ".validate": "newData.isString() && (newData.val() === 'none' || newData.val() === 'minimal')"
+        },
+        
+        "createdAt": {
+          ".validate": "newData.isNumber() || newData.val() === '.sv'"
+        },
+        
+        "activeViewers": {
+          ".read": "auth != null",
+          ".indexOn": ["joinedAt", "lastSeen"],
+          
+          "$userId": {
+            ".write": "auth != null && auth.uid === $userId",
+            
+            "joinedAt": {
+              ".validate": "newData.isNumber() || newData.val() === '.sv'"
+            },
+            
+            "lastSeen": {
+              ".validate": "newData.isNumber() || newData.val() === '.sv'"
+            },
+            
+            "isOwner": {
+              ".validate": "newData.isBoolean() || !newData.exists()"
+            },
+            
+            "currentDrift": {
+              ".validate": "(newData.isNumber() && newData.val() >= -300000 && newData.val() <= 300000) || !newData.exists()"
+            },
+            
+            "currentPosition": {
+              ".validate": "(newData.isNumber() && newData.val() >= 0 && newData.val() <= 86400) || !newData.exists()"
+            },
+            
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        
+        "videoState": {
+          ".read": "auth != null",
+          ".write": "auth != null",
+          
+          "isPlaying": {
+            ".validate": "newData.isBoolean()"
+          },
+          
+          "currentTime": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 86400"
+          },
+          
+          "startTimestamp": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          },
+          
+          "lastUpdate": {
+            ".validate": "newData.isNumber() || newData.val() === '.sv'"
+          },
+          
+          "$other": {
+            ".validate": false
+          }
+        },
+        
+        "keyframes": {
+          ".read": "auth != null",
+          
+          "$keyframeId": {
+            ".write": "auth != null && data.parent().parent().child('owner').val() === auth.uid",
+            
+            "time": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 86400"
+            },
+            
+            "timestamp": {
+              ".validate": "newData.isNumber() || newData.val() === '.sv'"
+            },
+            
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        
+        "syncState": {
+          ".read": "auth != null",
+          ".write": "auth != null",
+          
+          "isBuffering": {
+            ".validate": "newData.isBoolean() || !newData.exists()"
+          },
+          
+          "syncedSeekPosition": {
+            ".validate": "(newData.isNumber() && newData.val() >= 0 && newData.val() <= 86400) || newData.val() === null"
+          },
+          
+          "syncedPlayTime": {
+            ".validate": "(newData.isNumber() && newData.val() > 0) || newData.val() === null || !newData.exists()"
+          },
+          
+          "playAtTime": {
+            ".validate": "(newData.isNumber() && newData.val() > 0) || newData.val() === null || !newData.exists()"
+          },
+          
+          "initiatedBy": {
+            ".validate": "newData.isString() && newData.val().length > 0"
+          },
+          
+          "initiatedAt": {
+            ".validate": "newData.isNumber() || newData.val() === '.sv'"
+          },
+          
+          "$other": {
+            ".validate": false
+          }
+        },
+        
+        "syncRequests": {
+          ".read": "auth != null",
+          ".indexOn": ["fromUid", "status", "timestamp"],
+          
+          "$requestId": {
+            ".write": "auth != null && (auth.uid === $requestId || data.parent().parent().child('owner').val() === auth.uid || !newData.exists())",
+            
+            "fromUid": {
+              ".validate": "newData.isString() && newData.val().length > 0"
+            },
+            
+            "currentPosition": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 86400"
+            },
+            
+            "timestamp": {
+              ".validate": "newData.isNumber() || newData.val() === '.sv'"
+            },
+            
+            "status": {
+              ".validate": "newData.isString() && (newData.val() === 'pending' || newData.val() === 'rejected')"
+            },
+            
+            "expiresAt": {
+              ".validate": "newData.isNumber() && newData.val() > 0"
+            },
+            
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        
+        "ownershipRequests": {
+          ".read": "auth != null",
+          ".indexOn": ["fromUid", "status", "timestamp"],
+          
+          "$requestId": {
+            ".write": "auth != null && (newData.child('fromUid').val() === auth.uid || data.parent().parent().child('owner').val() === auth.uid || !newData.exists())",
+            
+            "fromUid": {
+              ".validate": "newData.isString() && newData.val().length > 0"
+            },
+            
+            "timestamp": {
+              ".validate": "newData.isNumber() || newData.val() === '.sv'"
+            },
+            
+            "status": {
+              ".validate": "newData.isString() && (newData.val() === 'pending' || newData.val() === 'accepted' || newData.val() === 'rejected')"
+            },
+            
+            "expiresAt": {
+              ".validate": "newData.isNumber() && newData.val() > 0"
+            },
+            
+            "rejectedAt": {
+              ".validate": "(newData.isNumber() || newData.val() === '.sv') || !newData.exists()"
+            },
+            
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    
+    "$other": {
+      ".read": false,
+      ".write": false
+    }
+  }
+}

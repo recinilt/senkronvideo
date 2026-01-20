@@ -1,4 +1,3 @@
-
 // YouTube sync interval başlat
 function startYouTubeSyncInterval() {
     if (ytPlayerStateInterval) {
@@ -29,7 +28,7 @@ function updateYouTubeTimeDisplay() {
     
     const timeDisplay = document.getElementById('youtube-time-display');
     if (timeDisplay) {
-        timeDisplay.textContent = formatTimeVR(currentTime) + ' / ' + formatTimeVR(duration);
+        timeDisplay.textContent = formatTime(currentTime) + ' / ' + formatTime(duration);
     }
     
     // Progress bar güncelle
@@ -38,4 +37,4 @@ function updateYouTubeTimeDisplay() {
         const percent = (currentTime / duration) * 100;
         progressBar.style.width = percent + '%';
     }
-}
+}

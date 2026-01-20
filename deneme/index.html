@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sinema ULTRA - Watch Party</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    
+    <!-- Adaptive Streaming (ABR): HLS.js + dash.js -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.6.15/dist/hls.min.js"></script>
+    <script src="https://cdn.dashjs.org/v5.1.1/modern/umd/dash.all.min.js"></script>
+    
+    <!-- WebTorrent P2P -->
+    <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+    
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- UI Overlay - Oda Oluşturma/Listesi -->
+    <div id="ui-overlay">
+        <div class="container">
+            <h1>🎬 Sinema ULTRA</h1>
+            <p class="subtitle">Watch Party - Birlikte İzle</p>
+            
+            <div id="create-room-section">
+                <div class="input-group">
+                    <label>Oda Adı</label>
+                    <input type="text" id="room-name" placeholder="Özel film gecesi">
+                </div>
+                
+                <!-- Video Source Tabs -->
+                <div class="input-group">
+                    <label>Video Kaynağı</label>
+                    <div class="video-source-tabs">
+                        <button type="button" id="tab-url" class="active" onclick="switchVideoSourceTab('url')">🔗 URL</button>
+                        <button type="button" id="tab-local" onclick="switchVideoSourceTab('local')">📁 P2P</button>
+                        <button type="button" id="tab-youtube" onclick="switchVideoSourceTab('youtube')">▶️ YouTube</button>
+                    </div>
+                </div>
+                
+                <!-- URL Section -->
+                <div id="url-section">
+                    <div class="input-group">
+                        <label>Video URL</label>
+                        <input type="text" id="video-url" placeholder="MP4, HLS (.m3u8), DASH (.mpd) linki">
+                    </div>
+                </div>
+                
+                <!-- Local File Section (P2P) -->
+                <div id="local-file-section">
+                    <div class="input-group">
+                        <div class="file-drop-zone" id="file-drop-zone" onclick="document.getElementById('local-video-file').click()">
+                            <div>📁 Dosya seçmek için tıklayın veya sürükleyip bırakın</div>
+                            <div style="font-size: 12px; opacity: 0.7; margin-top: 8px;">MP4, WebM, MKV desteklenir</div>
+                            <input type="file" id="local-video-file" accept="video/*">
+                            <div id="selected-file-name"></div>
+                        </div>
+                    </div>
+                    <div style="font-size: 12px; opacity: 0.8; margin-bottom: 15px;">
+                        ⚡ P2P: Video dosyanız doğrudan arkadaşlarınıza aktarılır. Tarayıcı açık kalmalıdır.
+                    </div>
+                </div>
+                
+                <!-- YouTube Section -->
+                <div id="youtube-section">
+                    <div class="input-group">
+                        <label>YouTube URL (İsteğe Bağlı)</label>
+                        <input type="text" id="youtube-url" placeholder="https://www.youtube.com/watch?v=VIDEO_ID">
+                    </div>
+                    <div class="youtube-info-box">
+                        <div>ℹ️ <strong>YouTube Modu Bilgisi:</strong></div>
+                        <ul>
+                            <li>✅ <strong>URL girmeden de oda açabilirsiniz!</strong> Oda içinde arama yaparak video seçebilirsiniz.</li>
+                            <li>✅ Senkronize watch party çalışır</li>
+                            <li>⚠️ Bazı videolar gömülmeye izin vermeyebilir</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Açıklama (isteğe bağlı)</label>
+                    <textarea id="room-description" placeholder="Bu odada ne izlenecek?"></textarea>
+                </div>
+                
+                <!-- Şifre Koruması (Opsiyonel) -->
+                <div class="input-group">
+                    <label>🔒 Oda Şifresi (isteğe bağlı)</label>
+                    <input type="password" id="room-password" placeholder="Boş bırakılırsa herkes girebilir">
+                    <div class="password-hint">Şifre korumalı odalar 🔒 ikonu ile görünür</div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Kalite Limiti</label>
+                    <select id="screen-size">
+                        <option value="medium">Orta (480p)</option>
+                        <option value="large" selected>Yüksek (720p)</option>
+                        <option value="imax">Maksimum</option>
+                    </select>
+                </div>
+                
+                <!-- Environment seçimi kaldırıldı (VR yoksa gereksiz) -->
+                <input type="hidden" id="environment" value="none">
+                
+                <button onclick="createRoom()">🚀 Oda Oluştur ve Katıl</button>
+                <button onclick="showRoomList()">📋 Mevcut Odalar</button>
+            </div>
+            
+            <div id="room-list-section" class="hidden">
+                <button onclick="showCreateRoom()">← Geri</button>
+                <div id="room-list"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Video Player Container (2D Mode) -->
+    <div id="video-container" class="hidden">
+        <!-- Header -->
+        <div class="video-header">
+            <div class="video-room-info">
+                <span id="video-room-name"></span>
+                <span id="video-viewer-count"></span>
+            </div>
+            <div class="video-sync-status">
+                <span id="sync-text">✅ Senkronize</span>
+            </div>
+        </div>
+        
+        <!-- Video Player Wrapper -->
+        <div class="video-player-wrapper">
+            <video id="video-player" playsinline webkit-playsinline></video>
+            
+            <!-- Buffer Countdown Overlay -->
+            <div id="buffer-countdown" class="video-overlay"></div>
+            
+            <!-- Sync Countdown Overlay -->
+            <div id="sync-countdown" class="video-overlay"></div>
+        </div>
+        
+        <!-- Video Controls -->
+        <div class="video-controls">
+            <!-- Progress Bar -->
+            <div class="video-progress-container">
+                <div class="video-progress-bar" id="video-progress-bar">
+                    <div class="video-progress-fill" id="video-progress-fill"></div>
+                    <div class="video-progress-handle" id="video-progress-handle"></div>
+                </div>
+                <div class="video-time-info">
+                    <span id="video-current-time">0:00</span>
+                    <span id="video-duration">0:00</span>
+                </div>
+            </div>
+            
+            <!-- Control Buttons -->
+            <div class="video-control-buttons">
+                <div class="control-group-left">
+                    <button id="btn-play" onclick="playVideo()" title="Oynat">▶️</button>
+                    <button id="btn-pause" onclick="pauseVideo()" title="Duraklat">⏸️</button>
+                    <button id="btn-stop" onclick="stopVideo()" title="Durdur">⏹️</button>
+                    <button id="btn-rewind" onclick="seekBackward()" title="-10 saniye">⏪</button>
+                    <button id="btn-forward" onclick="seekForward()" title="+10 saniye">⏩</button>
+                </div>
+                
+                <div class="control-group-center">
+                    <button id="btn-sync" onclick="initiateSync()" title="Senkronize Et">🔄 Sync</button>
+                </div>
+                
+                <div class="control-group-right">
+                    <!-- Volume Control -->
+                    <div class="volume-control">
+                        <button id="btn-mute" onclick="toggleMute()" title="Sessiz">🔊</button>
+                        <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="1" onchange="setVolume(this.value)">
+                    </div>
+                    
+                    <!-- Quality Control -->
+                    <div class="quality-control">
+                        <button id="btn-quality-down" onclick="decreaseMaxQuality()" title="Kalite Düşür">📉</button>
+                        <span id="quality-cap-label">720p</span>
+                        <button id="btn-quality-up" onclick="increaseMaxQuality()" title="Kalite Artır">📈</button>
+                    </div>
+                    
+                    <!-- Fullscreen -->
+                    <button id="btn-fullscreen" onclick="toggleFullscreen()" title="Tam Ekran">⛶</button>
+                </div>
+            </div>
+            
+            <!-- Bottom Controls -->
+            <div class="video-control-bottom">
+                <button id="btn-request-ownership" onclick="sendOwnershipRequest()">🙋 Sahiplik İste</button>
+                <button onclick="leaveRoom()">🚪 Çık</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- P2P Status -->
+    <div id="p2p-status">
+        <div id="p2p-status-text">P2P Bağlantısı...</div>
+        <div id="p2p-progress-bar">
+            <div id="p2p-progress-fill"></div>
+        </div>
+        <div id="p2p-stats"></div>
+    </div>
+    
+    <!-- Legacy elements for backward compatibility -->
+    <div id="room-info" style="display:none;">
+        <div id="room-name-display"></div>
+        <div id="viewer-count"></div>
+    </div>
+    <div id="sync-status" style="display:none;"></div>
+    <div id="vr-controls" style="display:none;"></div>
+    <div id="buffer-timer" style="display:none;"></div>
+
+<script>
+const v = new Date().getTime();
+document.write('<script src="ytapi.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js01.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js02-01.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js02-02.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js03.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js04.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js05.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js06.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js07.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js08.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js09.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js10.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js11.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js12.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js13.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js14.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js15.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js16.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js17.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js18.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js19.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js20.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js21.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js22.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js23.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js24-01.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js24-02.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js25.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js26.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js27.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js28-01-01.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js28-01-02.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js28-01-03.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js28-02.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js29-01.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js29-02.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js30.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js31.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js32-01.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js32-02.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js33.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js34.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js35.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js36.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js37.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js38.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js39.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js40-01.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js40-02.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js40-03.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js42-01-01.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js42-01-02.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js42-01-03.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js42-01-04.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js42-02-01.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js42-02-02.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js42-02-03.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js44-01-01.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js44-01-02.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js44-01-03.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js44-01-04.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js44-02.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js44-03-01.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js44-03-02.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js44-04-01.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js44-04-02.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js44-04-03.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js44-04-04.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js44-05.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js45-01.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js45-02.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js45-03.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js45-04.js?v=' + v + '"><' + '/script>');
+document.write('<script src="js46.js?v=' + v + '"><' + '/script>');
+</script>
+</body> 
+</html>
