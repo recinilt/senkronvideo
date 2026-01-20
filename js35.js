@@ -47,8 +47,17 @@ function listenVideoState() {
                 if (!isRoomOwner) {
                     const now = Date.now();
 
+                    // ✅ FIX: Pause komutu - throttle bypass
                     if (oldState && oldState.isPlaying && !newState.isPlaying) {
                         debugLog('Pause command detected - syncing immediately (bypass throttle)');
+                        lastVideoStateUpdate = now;
+                        syncVideo();
+                        return;
+                    }
+
+                    // ✅ FIX: Play komutu - throttle bypass (stop sonrası hızlı play sorunu için)
+                    if (oldState && !oldState.isPlaying && newState.isPlaying) {
+                        debugLog('Play command detected - syncing immediately (bypass throttle)');
                         lastVideoStateUpdate = now;
                         syncVideo();
                         return;
