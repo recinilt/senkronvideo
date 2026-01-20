@@ -1,4 +1,3 @@
-
 // Sahiplik isteğini reddet
 async function rejectOwnershipRequest(requestId) {
     if (!currentRoomId || !isRoomOwner) return;
@@ -73,7 +72,7 @@ function listenMyOwnershipRequestStatus() {
             lastOwnershipRequestTime = Date.now();
             pendingOwnershipRequest = null;
             
-            // Buton cooldown'a girsin
+            // ✅ FIX: Her iki buton için cooldown'a girsin
             updateOwnershipRequestButton();
             
             alert('Sahiplik isteğiniz reddedildi. 2 dakika sonra tekrar deneyebilirsiniz.');
