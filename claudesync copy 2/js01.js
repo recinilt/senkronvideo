@@ -32,8 +32,8 @@ const firebaseConfig = {
         const TIER3_LAGGING_SPEED = 1.15;
         
         // Hard seek throttle sabitleri
-        const LARGE_DRIFT_THRESHOLD = 2000; // ✅ FIX: YouTube gibi 2sn sonra hard seek
-        const HARD_SEEK_MIN_INTERVAL = 3000; // ✅ FIX: YouTube gibi 3sn cooldown
+        const LARGE_DRIFT_THRESHOLD = 9000; // ✅ FIX: 3000 -> 9000ms (9sn sonra hard seek)
+        const HARD_SEEK_MIN_INTERVAL = 2000;
         
         const OWNER_PRESENCE_UPDATE_INTERVAL = 30000;
         const OWNER_PRESENCE_TIMEOUT = 45000;
